@@ -1,1 +1,2 @@
 applicants.jason filter=lfs diff=lfs merge=lfs -text
+applicants.json filter=lfs diff=lfs merge=lfs -text
