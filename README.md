@@ -3,4 +3,4 @@ MVP de uma solução de IA para otimizar o processo de recrutamento e seleção,
 
 ## 🚀 Link da Aplicação
 
-**[Acesse a aplicação aqui!]([https://seu-link-aqui.streamlit.app](https://datathonfiap-match.streamlit.app/))**
+**[Acesse a aplicação aqui!](https://datathonfiap-match.streamlit.app/)**
