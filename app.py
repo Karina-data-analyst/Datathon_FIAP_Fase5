@@ -9,6 +9,7 @@ import re
 import string
 import unicodedata
 import nltk
+import gc
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from scipy.sparse import hstack, csr_matrix # Import csr_matrix for checks
@@ -141,6 +142,15 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
         df['competencia_tecnicas_e_comportamentais_tratadas'] = df['competencia_tecnicas_e_comportamentais'].apply(tokenizer)
         df['cv_tratados'] = df['cv_pt'].apply(tokenizer)
         
+        del df_vagas
+        del df_prospects
+        del df_applicants
+        del df_prospects_features
+        del df_vagas_features
+        del df_applicants_features
+
+        gc.collect()
+
         return df
 
     except FileNotFoundError as e:
