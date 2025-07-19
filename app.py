@@ -14,10 +14,11 @@ from scipy.sparse import hstack, csr_matrix
 
 # --- Funções de Pré-processamento Otimizadas ---
 
-@st.cache_data # Cacheia as listas de stopwords para não recarregá-las
+@st.cache_data
 def get_stopwords():
-   """Carrega e retorna as listas de stopwords em português e inglês."""
-return set(stopwords.words('portuguese')), set(stopwords.words('english'))
+    """Carrega e retorna as listas de stopwords em português e inglês."""
+    # A linha abaixo precisa estar indentada para pertencer à função
+    return set(stopwords.words('portuguese')), set(stopwords.words('english'))
 
 def normalize_accents(text):
     if not isinstance(text, str): return ""
@@ -52,20 +53,20 @@ def download_nltk_resources():
 stop_words_pt, stop_words_eng = get_stopwords()
 
 def tokenizer(text):
-     if not isinstance(text, str):
+    if not isinstance(text, str):
         return ""
     
-        # Carrega as stopwords aqui. Graças ao cache, isso só acontece de verdade uma vez.
-        stop_words_pt, stop_words_eng = get_stopwords()
-        
-        text = normalize_str(text)
-        text = "".join([w for w in text if not w.isdigit()])
-        
-        words = word_tokenize(text, language='portuguese')
-        words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng]
-        words = [y for y in words if len(y) > 2]
-return " ".join(words)
-
+    # Carrega as stopwords aqui. Graças ao cache, isso só acontece de verdade uma vez.
+    stop_words_pt, stop_words_eng = get_stopwords()
+    
+    text = normalize_str(text)
+    text = "".join([w for w in text if not w.isdigit()])
+    
+    words = word_tokenize(text, language='portuguese')
+    words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng]
+    words = [y for y in words if len(y) > 2]
+    # A linha abaixo precisa estar indentada para pertencer à função
+    return " ".join(words)
 # --- Funções de Carregamento e Processamento de Dados ---
 @st.cache_data
 def load_and_process_data(vagas_path, prospects_path, applicants_path):
