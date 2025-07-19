@@ -16,10 +16,8 @@ from scipy.sparse import hstack, csr_matrix
 
 @st.cache_data # Cacheia as listas de stopwords para não recarregá-las
 def get_stopwords():
-    """Carrega e retorna as listas de stopwords em português e inglês."""
-    stop_words_pt = set(stopwords.words('portuguese'))
-    stop_words_eng = set(stopwords.words('english'))
-    return stop_words_pt, stop_words_eng
+   """Carrega e retorna as listas de stopwords em português e inglês."""
+return set(stopwords.words('portuguese')), set(stopwords.words('english'))
 
 def normalize_accents(text):
     if not isinstance(text, str): return ""
@@ -54,16 +52,19 @@ def download_nltk_resources():
 stop_words_pt, stop_words_eng = get_stopwords()
 
 def tokenizer(text):
-    if not isinstance(text, str):
+     if not isinstance(text, str):
         return ""
     
-    text = normalize_str(text)
-    text = "".join([w for w in text if not w.isdigit()])
-    
-    words = word_tokenize(text, language='portuguese')
-    words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng]
-    words = [y for y in words if len(y) > 2]
-    return " ".join(words)
+        # Carrega as stopwords aqui. Graças ao cache, isso só acontece de verdade uma vez.
+        stop_words_pt, stop_words_eng = get_stopwords()
+        
+        text = normalize_str(text)
+        text = "".join([w for w in text if not w.isdigit()])
+        
+        words = word_tokenize(text, language='portuguese')
+        words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng]
+        words = [y for y in words if len(y) > 2]
+return " ".join(words)
 
 # --- Funções de Carregamento e Processamento de Dados ---
 @st.cache_data
