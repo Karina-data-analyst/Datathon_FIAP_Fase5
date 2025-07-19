@@ -16,6 +16,7 @@ from scipy.sparse import hstack, csr_matrix
 
 @st.cache_data # Cacheia as listas de stopwords para não recarregá-las
 def get_stopwords():
+    """Carrega e retorna as listas de stopwords em português e inglês."""
     stop_words_pt = set(stopwords.words('portuguese'))
     stop_words_eng = set(stopwords.words('english'))
     return stop_words_pt, stop_words_eng
@@ -41,6 +42,7 @@ def normalize_str(text):
 def download_nltk_resources():
     st.info("Verificando recursos NLTK (executado apenas uma vez)...")
     try:
+        # Usa quiet=True para não poluir os logs com mensagens de download
         nltk.download('stopwords', quiet=True)
         nltk.download('punkt', quiet=True)
         nltk.download('punkt_tab', quiet=True)
@@ -48,7 +50,7 @@ def download_nltk_resources():
         st.error(f"Falha ao baixar recursos do NLTK: {e}")
 
 # <<< MELHORIA 1: Otimização do Tokenizer >>>
-# As stopwords agora são carregadas uma única vez
+# As stopwords agora são carregadas uma única vez e guardadas em cache.
 stop_words_pt, stop_words_eng = get_stopwords()
 
 def tokenizer(text):
@@ -67,7 +69,7 @@ def tokenizer(text):
 @st.cache_data
 def load_and_process_data(vagas_path, prospects_path, applicants_path):
     try:
-        # Carregamento dos JSONs (código inalterado)
+        # Carregamento dos JSONs
         with open(vagas_path, 'r', encoding='utf-8') as f:
             data_vagas = json.load(f)
         vagas = []
@@ -111,7 +113,7 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
             df_applicants['outro_idioma'] = df_applicants['outro_idioma'].replace('-', np.nan)
         df_prospects = df_prospects.replace('', np.nan)
 
-        # Seleção de colunas (código inalterado)
+        # Seleção de colunas
         features_vagas = ['id', 'competencia_tecnicas_e_comportamentais']
         features_prospects = ['id_vaga', 'codigo', 'situacao_candidado']
         features_candidato = ['id', 'cv_pt']
@@ -124,7 +126,7 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
         df_vagas_features = df_vagas[cols_vagas].copy()
         df_applicants_features = df_applicants[cols_candidato].copy()
 
-        # Renomeação e merges (código inalterado)
+        # Renomeação e merges
         if 'codigo' in df_prospects_features.columns:
             df_prospects_features.rename(columns={'codigo': 'id_candidato'}, inplace=True)
         if 'id' in df_vagas_features.columns:
@@ -140,11 +142,11 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
         else:
             df['contratado'] = 0
 
-        # Aplicação do tokenizer (código inalterado)
+        # Aplicação do tokenizer
         df['competencia_tecnicas_e_comportamentais_tratadas'] = df['competencia_tecnicas_e_comportamentais'].apply(tokenizer)
         df['cv_tratados'] = df['cv_pt'].apply(tokenizer)
         
-        # Otimização de memória (código inalterado)
+        # Otimização de memória
         del df_vagas, df_prospects, df_applicants
         del df_prospects_features, df_vagas_features, df_applicants_features
         gc.collect()
@@ -158,10 +160,6 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
         st.error(f"Erro ao carregar ou processar dados JSON: {e}")
         st.exception(e)
         return pd.DataFrame()
-
-# O restante do seu código (load_ml_resources, calculate_match_scores_for_df, etc.)
-# pode permanecer como está, pois já está robusto.
-# Apenas colei o restante do seu script abaixo para que você tenha o arquivo completo.
 
 @st.cache_resource
 def load_ml_resources():
