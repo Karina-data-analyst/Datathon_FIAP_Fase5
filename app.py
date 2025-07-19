@@ -192,54 +192,56 @@ def load_ml_resources():
 def calculate_match_scores_for_df(df, _model, _vectorizer):
     if df.empty or _model is None or _vectorizer is None:
         st.warning("Não foi possível calcular scores: DataFrame vazio ou recursos de ML não carregados.")
-        if 'match_score' not in df.columns: df['match_score'] = np.nan
-        if 'match_score_pct' not in df.columns: df['match_score_pct'] = np.nan
+        df['match_score'] = np.nan
+        df['match_score_pct'] = np.nan
         return df
 
-    st.info("Calculando Scores de Match para os dados carregados...")
-    df_temp = df.copy()
+    st.info("Calculando Scores de Match...")
+    
+    # Cria uma máscara booleana para as linhas que têm texto válido
+    mask_valid_text = (df['cv_tratados'].str.strip().astype(bool)) & \
+                      (df['competencia_tecnicas_e_comportamentais_tratadas'].str.strip().astype(bool))
+    
+    # Inicializa a coluna de scores com NaN
+    df['match_score'] = np.nan
 
-    df_to_score = df_temp[
-        (df_temp['cv_tratados'].str.strip().astype(bool)) &
-        (df_temp['competencia_tecnicas_e_comportamentais_tratadas'].str.strip().astype(bool))
-    ].copy()
+    # Se houver linhas válidas para pontuar
+    if mask_valid_text.any():
+        try:
+            # Seleciona apenas os dados a serem pontuados
+            text_to_score_cv = df.loc[mask_valid_text, 'cv_tratados']
+            text_to_score_job = df.loc[mask_valid_text, 'competencia_tecnicas_e_comportamentais_tratadas']
 
-    if df_to_score.empty:
+            # Vetoriza os dados
+            cv_vectors = _vectorizer.transform(text_to_score_cv)
+            job_desc_vectors = _vectorizer.transform(text_to_score_job)
+            X = hstack([cv_vectors, job_desc_vectors])
+
+            # Deleta variáveis intermediárias para liberar memória
+            del cv_vectors, job_desc_vectors, text_to_score_cv, text_to_score_job
+            gc.collect()
+
+            # Verifica a compatibilidade
+            if X.shape[1] != _model.n_features_:
+                st.error(f"Erro de Incompatibilidade: Vetor gerou {X.shape[1]} features, mas modelo espera {_model.n_features_}.")
+            else:
+                # Calcula e atribui os scores apenas nas linhas correspondentes
+                match_score_proba = _model.predict_proba(X)[:, 1]
+                df.loc[mask_valid_text, 'match_score'] = match_score_proba
+
+            del X # Deleta a matriz de features
+            gc.collect()
+
+        except Exception as e:
+            st.error(f"Erro ao vetorizar ou calcular scores: {e}")
+    else:
         st.warning("Nenhum dado válido para cálculo de score após pré-processamento.")
-        df_temp['match_score'] = np.nan
-        df_temp['match_score_pct'] = np.nan
-        return df_temp
 
-    try:
-        cv_vectors = _vectorizer.transform(df_to_score['cv_tratados'])
-        job_desc_vectors = _vectorizer.transform(df_to_score['competencia_tecnicas_e_comportamentais_tratadas'])
-        X = hstack([cv_vectors, job_desc_vectors])
-    except Exception as e:
-        st.error(f"Erro ao vetorizar dados: {e}")
-        df_temp['match_score'] = np.nan
-        df_temp['match_score_pct'] = np.nan
-        return df_temp
+    # Calcula o percentual para toda a coluna de uma vez
+    df['match_score_pct'] = df['match_score'] * 100
 
-    if X.shape[1] != _model.n_features_:
-        st.error(f"Erro de Incompatibilidade: Vetor gerou {X.shape[1]} features, mas modelo espera {_model.n_features_}.")
-        df_temp['match_score'] = np.nan
-        df_temp['match_score_pct'] = np.nan
-        return df_temp
-
-    match_score_proba = _model.predict_proba(X)[:, 1]
-    df_to_score['match_score'] = match_score_proba
-
-    scores_calculados = df_to_score[['id_vaga', 'id_candidato', 'match_score']]
-
-    df_final = df_temp.merge(scores_calculados, on=['id_vaga', 'id_candidato'], how='left', suffixes=('_antigo', ''))
-    
-    if 'match_score_antigo' in df_final.columns:
-        df_final.drop(columns=['match_score_antigo'], inplace=True)
-    
-    df_final['match_score_pct'] = df_final['match_score'] * 100
-
-    st.success("Scores de Match calculados com sucesso!")
-    return df_final
+    st.success("Cálculo de scores concluído!")
+    return df
 
 def calculate_single_score(cv_text, job_desc_text, _model, _vectorizer):
     if _model is None or _vectorizer is None:
