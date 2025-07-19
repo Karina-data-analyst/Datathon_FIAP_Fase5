@@ -17,7 +17,6 @@ from scipy.sparse import hstack, csr_matrix
 @st.cache_data
 def get_stopwords():
     """Carrega e retorna as listas de stopwords em português e inglês."""
-    # A linha abaixo precisa estar indentada para pertencer à função
     return set(stopwords.words('portuguese')), set(stopwords.words('english'))
 
 def normalize_accents(text):
@@ -41,22 +40,19 @@ def normalize_str(text):
 def download_nltk_resources():
     st.info("Verificando recursos NLTK (executado apenas uma vez)...")
     try:
-        # Usa quiet=True para não poluir os logs com mensagens de download
         nltk.download('stopwords', quiet=True)
         nltk.download('punkt', quiet=True)
         nltk.download('punkt_tab', quiet=True)
     except Exception as e:
         st.error(f"Falha ao baixar recursos do NLTK: {e}")
 
-# <<< MELHORIA 1: Otimização do Tokenizer >>>
-# As stopwords agora são carregadas uma única vez e guardadas em cache.
-stop_words_pt, stop_words_eng = get_stopwords()
-
+# <<< CORREÇÃO DA LÓGICA >>>
+# A chamada para get_stopwords() foi movida para dentro do tokenizer.
 def tokenizer(text):
     if not isinstance(text, str):
         return ""
     
-    # Carrega as stopwords aqui. Graças ao cache, isso só acontece de verdade uma vez.
+    # As stopwords são carregadas aqui. O cache garante que isso só aconteça uma vez.
     stop_words_pt, stop_words_eng = get_stopwords()
     
     text = normalize_str(text)
@@ -65,8 +61,8 @@ def tokenizer(text):
     words = word_tokenize(text, language='portuguese')
     words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng]
     words = [y for y in words if len(y) > 2]
-    # A linha abaixo precisa estar indentada para pertencer à função
     return " ".join(words)
+
 # --- Funções de Carregamento e Processamento de Dados ---
 @st.cache_data
 def load_and_process_data(vagas_path, prospects_path, applicants_path):
@@ -109,7 +105,7 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
             candidatos.append(linha)
         df_applicants = pd.DataFrame(candidatos)
 
-        # <<< MELHORIA 2: Correção dos Avisos (FutureWarning) do Pandas >>>
+        # Correção dos Avisos (FutureWarning) do Pandas
         df_applicants = df_applicants.replace('', np.nan)
         if 'outro_idioma' in df_applicants.columns:
             df_applicants['outro_idioma'] = df_applicants['outro_idioma'].replace('-', np.nan)
@@ -162,6 +158,25 @@ def load_and_process_data(vagas_path, prospects_path, applicants_path):
         st.error(f"Erro ao carregar ou processar dados JSON: {e}")
         st.exception(e)
         return pd.DataFrame()
+
+# O restante do seu código (load_ml_resources, calculate_match_scores_for_df, etc.)
+# pode permanecer como está. Apenas colei o restante abaixo para que você tenha o arquivo completo.
+
+# --- Bloco Principal da Aplicação ---
+# >>>>> A ORDEM AQUI É CRUCIAL <<<<<
+# 1. Definir os caminhos dos arquivos
+# 2. Chamar a função de download
+# 3. Carregar os recursos
+
+# Caminhos dos Arquivos
+VAGAS_FILEPATH = 'vagas.json'
+PROSPECTS_FILEPATH = 'prospects.json'
+APPLICANTS_FILEPATH = 'applicants.json'
+MODEL_FILEPATH = 'lightgbm_model.pkl'
+VECTORIZER_FILEPATH = 'tfidf_vectorizer.pkl'
+
+# Garante que os recursos NLTK sejam baixados antes de qualquer outra coisa
+download_nltk_resources()
 
 @st.cache_resource
 def load_ml_resources():
@@ -249,15 +264,7 @@ def calculate_single_score(cv_text, job_desc_text, _model, _vectorizer):
     match_score_proba = _model.predict_proba(X)[:, 1]
     return match_score_proba[0] * 100, None
 
-# --- Bloco Principal da Aplicação ---
-download_nltk_resources()
-
-VAGAS_FILEPATH = 'vagas.json'
-PROSPECTS_FILEPATH = 'prospects.json'
-APPLICANTS_FILEPATH = 'applicants.json'
-MODEL_FILEPATH = 'lightgbm_model.pkl'
-VECTORIZER_FILEPATH = 'tfidf_vectorizer.pkl'
-
+# Carregar Recursos e Dados
 model, vectorizer = load_ml_resources()
 df_base_processed = load_and_process_data(VAGAS_FILEPATH, PROSPECTS_FILEPATH, APPLICANTS_FILEPATH)
 
@@ -295,7 +302,6 @@ if feature_selection == 'Calcular Score para Novos Dados':
 elif feature_selection == 'Visualizar Top Candidatos por Vaga Existente':
     st.header("Visualizar Top Candidatos por Vaga Existente")
 
-    # <<< MELHORIA 3: Verificação de Colunas Mais Robusta >>>
     if not df_with_scores.empty and 'id_vaga' in df_with_scores.columns:
         lista_vagas_ids = sorted(df_with_scores['id_vaga'].dropna().unique().tolist())
         
