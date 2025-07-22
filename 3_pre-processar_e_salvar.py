@@ -94,6 +94,13 @@ def main():
         df = df_prospects_features.merge(df_vagas_features, on='id_vaga', how='left')
         df = df.merge(df_applicants_features, on='id_candidato', how='left')
 
+        print("Filtrando vagas com apenas um candidato...")
+        # Calcula quantos candidatos existem para cada vaga
+        contagem_candidatos_por_vaga = df.groupby('id_vaga')['id_candidato'].transform('count')
+        # Mantém apenas as linhas onde a contagem de candidatos para aquela vaga é maior que 1
+        df = df[contagem_candidatos_por_vaga > 3].copy()
+        print(f"DataFrame reduzido para {len(df)} linhas após a filtragem.")
+
         # <<< PONTO DE VERIFICAÇÃO 1 >>>
         print("\n--- PONTO 1: COLUNAS APÓS O MERGE ---")
         print(df.columns.tolist())
@@ -108,6 +115,17 @@ def main():
         print("Aplicando tokenizer nas colunas de texto...")
         df['competencia_tecnicas_e_comportamentais_tratadas'] = df['competencia_tecnicas_e_comportamentais'].apply(lambda x: tokenizer(x, stop_words_pt, stop_words_eng))
         df['cv_tratados'] = df['cv_pt'].apply(lambda x: tokenizer(x, stop_words_pt, stop_words_eng))
+
+        status_relevantes = [
+            'Encaminhado ao Requisitante',
+            'Prospect',
+            'Em Entrevista Com Cliente',
+            'Aprovado',
+            'Contratado pela Decision'
+        ]
+        # Filtra o DataFrame para manter apenas as linhas com os status da lista
+        df = df[df['situacao_candidado'].isin(status_relevantes)].copy()
+        print(f"DataFrame reduzido para {len(df)} linhas após filtro de status.")
         
         # <<< PONTO DE VERIFICAÇÃO 2 >>>
         print("\n--- PONTO 2: COLUNAS APÓS O TOKENIZER ---")
@@ -132,9 +150,12 @@ def main():
         df_final = df[colunas_finais_existentes].copy()
         
         # <<< PONTO DE VERIFICAÇÃO 3 >>>
-        print("\n--- PONTO 3: COLUNAS QUE SERÃO SALVAS NO PARQUET ---")
-        print(df_final.columns.tolist())
-        print("-" * 40)
+        print("Otimizando tipos de dados do DataFrame final...")
+        for col in df_final.select_dtypes(include=['int64']).columns:
+            df_final[col] = pd.to_numeric(df_final[col], downcast='integer')
+        for col in df_final.select_dtypes(include=['float64']).columns:
+            df_final[col] = pd.to_numeric(df_final[col], downcast='float')
+        print("Tipos de dados otimizados.")
         
         print("Salvando DataFrame processado em 'dados_processados.parquet'...")
         df_final.to_parquet('dados_processados.parquet', index=False)
