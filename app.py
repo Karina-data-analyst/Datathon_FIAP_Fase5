@@ -265,8 +265,20 @@ with tab2:
         st.warning("Recursos de ML não carregados.")
 
 # --- Barra Lateral ---
-st.sidebar.title("Sobre")
+st.sidebar.title("Sobre o Projeto")
 st.sidebar.info(
     "Este MVP foi desenvolvido para o Datathon FIAP, aplicando técnicas de NLP e Machine Learning "
     "para criar um sistema de recomendação de candidatos."
 )
+
+
+st.sidebar.subheader("Desenvolvido por:")
+st.sidebar.markdown("""
+- **Bruno Santana Sereicikas de Azevedo** – RM358739
+- **Karina Marcia da Silva** – RM359467
+- **Renata Paes da silva** – RM359515
+""")
+
+
+st.sidebar.write("---")
+st.sidebar.write("Desenvolvido para o Datathon FIAP")
