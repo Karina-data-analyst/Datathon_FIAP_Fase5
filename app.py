@@ -12,9 +12,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from scipy.sparse import hstack, csr_matrix
 
-# <<< VERSÃO FINAL E OTIMIZADA >>>
 
-# --- Funções de Pré-processamento e NLTK (inalteradas) ---
 
 @st.cache_data
 def get_stopwords():
@@ -23,7 +21,7 @@ def get_stopwords():
 
 @st.cache_resource
 def download_nltk_resources():
-    """Baixa os recursos necessários do NLTK de forma silenciosa."""
+    
     try:
         nltk.download('stopwords', quiet=True)
         nltk.download('punkt', quiet=True)
@@ -43,11 +41,11 @@ def tokenizer(text):
     words = [x for x in words if x not in stop_words_pt and x not in stop_words_eng and len(x) > 2]
     return " ".join(words)
 
-# --- Funções de Carga de Recursos e Cálculo de Score (inalteradas) ---
+
 
 @st.cache_resource
 def load_ml_resources():
-    """Carrega o modelo e o vetorizador salvos."""
+    
     try:
         model = joblib.load(MODEL_FILEPATH)
         vectorizer = joblib.load(VECTORIZER_FILEPATH)
@@ -58,7 +56,7 @@ def load_ml_resources():
 
 @st.cache_data
 def calculate_match_scores_for_df(df, _model, _vectorizer):
-    """Calcula os scores de match para o DataFrame pré-processado."""
+    
     if df.empty or _model is None or _vectorizer is None:
         st.warning("Não foi possível calcular scores: Dados ou recursos de ML não carregados.")
         df['match_score'] = np.nan
@@ -86,7 +84,7 @@ def calculate_match_scores_for_df(df, _model, _vectorizer):
     return df
 
 def calculate_single_score(cv_text, job_desc_text, _model, _vectorizer):
-    """Calcula o score para um único par de CV e Vaga."""
+   
     if not all([_model, _vectorizer]): return None, "Recursos de ML não carregados."
     processed_cv = tokenizer(cv_text)
     processed_job_desc = tokenizer(job_desc_text)
@@ -100,28 +98,28 @@ def calculate_single_score(cv_text, job_desc_text, _model, _vectorizer):
 
 # --- Bloco Principal da Aplicação ---
 
-# Configurações da página
+
 st.set_page_config(page_title="Decision Match AI", page_icon="🤖", layout="wide")
 
-# Caminhos dos Arquivos
+
 MODEL_FILEPATH = 'lightgbm_model.pkl'
 VECTORIZER_FILEPATH = 'tfidf_vectorizer.pkl'
 PROCESSED_DATA_FILEPATH = 'dados_processados.parquet'
 
-# Garante que os recursos NLTK sejam baixados
+
 download_nltk_resources()
 
-# <<< MUDANÇA CRUCIAL: Nova função para carregar dados pré-processados >>>
+
 @st.cache_data
 def load_cached_data(path):
-    """Carrega o arquivo Parquet pré-processado."""
+    
     try:
         return pd.read_parquet(path)
     except FileNotFoundError:
         st.error(f"Erro: Arquivo de dados pré-processados '{path}' não encontrado. Execute o script '3_pre-processar_e_salvar.py' primeiro.")
         return pd.DataFrame()
 
-# Carrega todos os recursos e dados
+
 with st.spinner("Carregando recursos e calculando scores..."):
     model, vectorizer = load_ml_resources()
     df_base_processed = load_cached_data(PROCESSED_DATA_FILEPATH)
@@ -139,31 +137,27 @@ st.write("Uma ferramenta de IA para otimizar o processo de recrutamento, calcula
 tab1, tab2 = st.tabs(["🏆 Visualizar Top Candidatos", "🔍 Analisar Novo Match"])
 
 def formatar_scores_com_medalhas(series_pontuacao):
-    """
-    Recebe uma Series do pandas com scores, identifica os 3 maiores,
-    e retorna uma nova Series com os scores formatados como string,
-    com medalhas para o top 3.
-    """
-    # Cria uma cópia para não alterar a series original
+
+    
     series_formatada = series_pontuacao.copy()
     
-    # Pega os scores válidos (não nulos) e os ordena para encontrar o top 3
+    
     scores_validos = series_pontuacao.dropna().sort_values(ascending=False)
     
-    # Identifica os valores do top 3 (cuidado com empates)
+    
     top_scores = scores_validos.unique()[:3]
     
-    # Mapeia a medalha para cada posição
+    
     medalhas = ["🥇", "🥈", "🥉"]
     
-    # Aplica a formatação com medalha para o top 3
+    
     for i, score_valor in enumerate(top_scores):
-        # Encontra os índices que correspondem ao score do top i
+        
         indices = series_pontuacao[series_pontuacao == score_valor].index
-        # Formata a pontuação adicionando a medalha
+        
         series_formatada.loc[indices] = f"{medalhas[i]} {score_valor:.2f}%"
         
-    # Formata os scores restantes (que não estão no top 3)
+    
     outros_indices = series_pontuacao.index.difference(series_formatada[series_formatada.str.contains("🥇|🥈|🥉", na=False)].index)
     series_formatada.loc[outros_indices] = series_pontuacao.loc[outros_indices].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A")
 
@@ -209,9 +203,9 @@ with tab1:
                         if cols_to_display_existing:
                             df_display = df_job_candidates_sorted[cols_to_display_existing]
 
-                            # <<< MUDANÇA PRINCIPAL: Usa a nova função de formatação >>>
+                           
                             if 'match_score_pct' in df_display.columns:
-                                # A função sort_values já garantiu a ordem, então passamos a coluna de scores para formatação
+                                
                                 df_display['match_score_pct'] = formatar_scores_com_medalhas(df_display['match_score_pct'])
                             
                             df_display.rename(columns={
@@ -249,17 +243,17 @@ with tab2:
             elif score is not None:
                 st.subheader("Resultado da Análise:")
                 
-                # Exibe a pontuação exata usando st.metric
+                
                 st.metric(label="Pontuação alcançada", value=f"{score:.2f}%")
 
-                # <<< INÍCIO DA NOVA LÓGICA DE FEEDBACK PERSONALIZADO >>>
+                
                 if score >= 50:
                     st.success("✅ **Forte alinhamento com a vaga.** Candidato com alto potencial, recomendado para as próximas etapas.")
                 elif score >= 30:
                     st.warning("⚠️ **Alinhamento moderado.** Candidato atende a requisitos importantes. Recomenda-se análise detalhada do currículo.")
                 else:
                     st.error("❌ **Baixo alinhamento com a vaga.** O perfil do candidato parece divergir dos requisitos principais.")
-                # <<< FIM DA NOVA LÓGICA >>>
+              
                 
     else:
         st.warning("Recursos de ML não carregados.")

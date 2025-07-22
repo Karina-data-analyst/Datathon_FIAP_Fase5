@@ -7,7 +7,7 @@ import unicodedata
 import nltk
 import gc
 
-# --- Funções de Pré-processamento (Consistentes com o app.py) ---
+
 
 def normalize_accents(text):
     if not isinstance(text, str): return ""
@@ -36,17 +36,14 @@ def tokenizer(text, stop_words_pt, stop_words_eng):
     words = [y for y in words if len(y) > 2]
     return " ".join(words)
 
-# --- Função Principal do Script ---
+
 
 def main():
-    """
-    Script para carregar os dados JSON, processá-los e salvar o resultado
-    em um arquivo Parquet otimizado para a aplicação Streamlit.
-    """
+
     print("Iniciando pré-processamento offline...")
 
     try:
-        # Etapa 1: Baixar recursos NLTK e carregar stopwords
+       
         print("Baixando recursos NLTK...")
         nltk.download('stopwords', quiet=True)
         nltk.download('punkt', quiet=True)
@@ -55,7 +52,7 @@ def main():
         stop_words_eng = set(nltk.corpus.stopwords.words('english'))
         print("Recursos NLTK prontos.")
 
-        # Etapa 2: Carregar os arquivos JSON (código inalterado)
+        
         print("Carregando arquivos JSON...")
         with open('vagas.json', 'r', encoding='utf-8') as f: data_vagas = json.load(f)
         vagas = [{'id': id_vaga, **conteudo.get('informacoes_basicas', {}), **conteudo.get('perfil_vaga', {}), **conteudo.get('beneficios', {})} for id_vaga, conteudo in data_vagas.items()]
@@ -70,7 +67,7 @@ def main():
         df_applicants = pd.DataFrame(candidatos)
         print("Arquivos JSON carregados.")
 
-        # Etapa 3: Processar e juntar os DataFrames
+        
         print("Processando e juntando DataFrames...")
         df_applicants = df_applicants.replace('', np.nan)
         if 'outro_idioma' in df_applicants.columns:
@@ -107,7 +104,7 @@ def main():
         else:
             df['contratado'] = 0
         
-        # Etapa 4: Aplicar o tokenizer
+        
         print("Aplicando tokenizer nas colunas de texto...")
         df['competencia_tecnicas_e_comportamentais_tratadas'] = df['competencia_tecnicas_e_comportamentais'].apply(lambda x: tokenizer(x, stop_words_pt, stop_words_eng))
         df['cv_tratados'] = df['cv_pt'].apply(lambda x: tokenizer(x, stop_words_pt, stop_words_eng))
@@ -117,7 +114,7 @@ def main():
         print(df.columns.tolist())
         print("-" * 40)
 
-        # Etapa 5: Selecionar colunas finais e salvar
+        
         print("Selecionando colunas finais...")
         colunas_necessarias = [
             'id_vaga',
